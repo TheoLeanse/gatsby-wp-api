@@ -7,7 +7,9 @@
     "gatsby-link": "^1.6.40",
     "gatsby-plugin-netlify-cms": "^2.0.1",
     "gatsby-plugin-react-helmet": "^2.0.10",
+    "gatsby-source-filesystem": "^1.5.35",
     "gatsby-source-wordpress": "^2.0.83",
+    "gatsby-transformer-remark": "^1.7.40",
     "netlify-cms": "^1.7.0",
     "react-helmet": "^5.2.0"
   },

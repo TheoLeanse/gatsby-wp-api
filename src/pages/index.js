@@ -4,20 +4,22 @@ import Link from 'gatsby-link'
 const IndexPage = ({ data }) => (
 	<div>
 		<ul>
-			{data.allWordpressPage.edges.map(edge => (
-				<li>
-					<Link to={`/${edge.node.slug}`}>{edge.node.title}</Link>
-				</li>
-			))}
-		</ul>
-		<ul>
-			{data.allWordpressPost.edges.map(edge => (
-				<li>
-					<Link to={`/posts/${edge.node.slug}`}>
-						{edge.node.title}
-					</Link>
-				</li>
-			))}
+			{data.allMarkdownRemark.edges
+				.map(
+					({
+						node: {
+							frontmatter: { collection },
+						},
+					}) => collection
+				)
+				.filter((el, i, a) => el !== a[i - 1])
+				.map(collection => (
+					<li>
+						<Link to={`/collections/${collection}`}>
+							{collection}
+						</Link>
+					</li>
+				))}
 		</ul>
 	</div>
 )
@@ -26,21 +28,12 @@ export default IndexPage
 
 export const pageQuery = graphql`
 	query Index {
-		allWordpressPost {
+		allMarkdownRemark {
 			edges {
 				node {
-					id
-					slug
-					title
-				}
-			}
-		}
-		allWordpressPage {
-			edges {
-				node {
-					id
-					slug
-					title
+					frontmatter {
+						collection
+					}
 				}
 			}
 		}
