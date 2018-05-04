@@ -3,109 +3,152 @@ const Promise = require(`bluebird`)
 const path = require(`path`)
 const slash = require(`slash`)
 
-// // Implement the Gatsby API “createPages”. This is
-// called after the Gatsby bootstrap is finished so you have
-// access to any information necessary to programmatically
-// create pages.
-
-// Will create pages for Wordpress pages (route : /{slug})
-// Will create pages for Wordpress posts (route : /post/{slug})
-
-exports.createPages = ({ graphql, boundActionCreators }) => {
-	const { createPage } = boundActionCreators
-
-	return new Promise((resolve, reject) => {
-		// The “graphql” function allows us to run arbitrary
-		// queries against the local Wordpress graphql schema. Think of
-		// it like the site has a built-in database constructed
-		// from the fetched data that you can run queries against.
-
-		// ==== PAGES (WORDPRESS NATIVE) ====
-		graphql(
-			`
-				{
-					allWordpressPage {
-						edges {
-							node {
-								id
-								slug
-							}
+// ==== PAGES (WORDPRESS NATIVE) ====
+const createPagePages = async ({ graphql, createPage }) => {
+	const result = await graphql(
+		`
+			{
+				allWordpressPage {
+					edges {
+						node {
+							id
+							slug
 						}
 					}
 				}
-			`
-		)
-			.then(result => {
-				if (result.errors) {
-					console.log('PAGES errors', result.errors)
-					reject(result.errors)
-				}
+			}
+		`
+	)
 
-				// We want to create a detailed page for each
-				// page node. We'll just use the Wordpress Slug for the slug.
-				// The Page ID is prefixed with 'PAGE_'
-				_.each(result.data.allWordpressPage.edges, edge => {
-					// Gatsby uses Redux to manage its internal state.
-					// Plugins and sites can use functions like "createPage"
-					// to interact with Gatsby.
-					createPage({
-						// Each page is required to have a `path` as well
-						// as a template component. The `context` is
-						// optional but is often necessary so the template
-						// can query data specific to each page.
-						path: `/${edge.node.slug}`,
-						component: slash(
-							path.resolve(`./src/templates/page.js`)
-						),
-						context: {
-							id: edge.node.id,
-						},
-					})
-				})
-			})
-			// ==== END PAGES ====
+	if (result.errors) {
+		console.log('PAGES errors', result.errors)
+		throw Error(result.errors)
+	}
 
-			// ==== POSTS (WORDPRESS NATIVE AND ACF) ====
-			.then(() => {
-				graphql(
-					`
-						{
-							allWordpressPost {
-								edges {
-									node {
-										id
-										slug
-										status
-										template
-										format
-									}
-								}
-							}
-						}
-					`
-				).then(result => {
-					if (result.errors) {
-						console.log('POSTS errors', result.errors)
-						reject(result.errors)
-					}
-
-					// We want to create a detailed page for each
-					// post node. We'll just use the Wordpress Slug for the slug.
-					// The Post ID is prefixed with 'POST_'
-					_.each(result.data.allWordpressPost.edges, edge => {
-						createPage({
-							path: `/posts/${edge.node.slug}`,
-							component: slash(
-								path.resolve(`./src/templates/post.js`)
-							),
-							context: {
-								id: edge.node.id,
-							},
-						})
-					})
-					resolve()
-				})
-			})
-		// ==== END POSTS ====
+	result.data.allWordpressPage.edges.forEach(edge => {
+		createPage({
+			path: `/${edge.node.slug}`,
+			component: slash(path.resolve(`./src/templates/page.js`)),
+			context: {
+				id: edge.node.id,
+			},
+		})
 	})
+}
+
+const createPostPages = async ({ graphql, createPage }) => {
+	const result = await graphql(
+		`
+			{
+				allWordpressPost {
+					edges {
+						node {
+							id
+							slug
+							status
+							template
+							format
+						}
+					}
+				}
+			}
+		`
+	)
+
+	if (result.errors) {
+		console.log('POSTS errors', result.errors)
+		throw Error(result.errors)
+	}
+
+	result.data.allWordpressPost.edges.forEach(edge => {
+		createPage({
+			path: `/posts/${edge.node.slug}`,
+			component: slash(path.resolve(`./src/templates/post.js`)),
+			context: {
+				id: edge.node.id,
+			},
+		})
+	})
+}
+
+const createCollectionPages = async ({ graphql, createPage }) => {
+	const result = await graphql(
+		`
+			{
+				allMarkdownRemark {
+					edges {
+						node {
+							frontmatter {
+								collection
+							}
+						}
+					}
+				}
+			}
+		`
+	)
+	if (result.errors) {
+		console.log('COLLECTIONS errors', result.errors)
+		throw Error(result.errors)
+	}
+
+	result.data.allMarkdownRemark.edges.forEach(edge => {
+		createPage({
+			path: `/collections/${edge.node.frontmatter.collection}`,
+			component: slash(path.resolve(`./src/templates/collection.js`)),
+			context: {
+				id: edge.node.frontmatter.collection,
+			},
+		})
+	})
+}
+
+const createPoemPages = async ({ graphql, createPage }) => {
+	const result = await graphql(
+		`
+			{
+				allMarkdownRemark {
+					edges {
+						node {
+							id
+							frontmatter {
+								title
+								collection
+							}
+						}
+					}
+				}
+			}
+		`
+	)
+	if (result.errors) {
+		console.log('POEMS errors', result.errors)
+		throw Error(result.errors)
+	}
+
+	result.data.allMarkdownRemark.edges.forEach(edge => {
+		createPage({
+			path: `/collections/${edge.node.frontmatter.collection}/poems/${
+				edge.node.frontmatter.title
+			}`,
+			component: slash(path.resolve(`./src/templates/poem.js`)),
+			context: {
+				id: edge.node.id,
+			},
+		})
+	})
+}
+
+exports.createPages = async ({ graphql, boundActionCreators }) => {
+	const { createPage } = boundActionCreators
+	try {
+		await Promise.all([
+			createPagePages({ graphql, createPage }),
+			createPostPages({ graphql, createPage }),
+			createCollectionPages({ graphql, createPage }),
+			createPoemPages({ graphql, createPage }),
+		])
+	} catch (e) {
+		Promise.reject(e)
+	}
 }
